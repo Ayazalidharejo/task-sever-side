@@ -129,10 +129,14 @@ const initializeDatabase = () => {
 // Run database initialization
 initializeDatabase();
 
+
 app.use('/api/blogs', blogRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/contact', contactRoutes);
 
+app.get('/', (req, res) => {
+  res.json({ message: 'API is running!' });
+});
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 
