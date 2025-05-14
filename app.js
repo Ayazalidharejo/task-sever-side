@@ -61,86 +61,54 @@
 
 
 
+// app.js
 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const serverless = require('serverless-http'); // For Vercel
 
-// Load environment variables
 dotenv.config();
 
-// Initialize express app
-const app = express();
-
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'https://your-vercel-domain.vercel.app' // Replace with your deployed frontend
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
-
-// Middleware
-app.use(express.json());
-
-// Serve static files (for local development only)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Routes
 const authRoutes = require('./routes/auth');
 const blogRoutes = require('./routes/blogs');
 const feedbackRoutes = require('./routes/feedback');
 const contactRoutes = require('./routes/contact');
+
+const app = express();
+
+// CORS setup
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true
+}));
+
+app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/contact', contactRoutes);
 
-// Welcome route
-app.get('/api/welcome', (req, res) => {
+app.get('/welcome', (req, res) => {
   res.json({ message: 'Welcome to the Blog App API!' });
 });
 
 // MongoDB connection
-let isDbConnected = false;
-
-async function connectToDatabase() {
-  if (!isDbConnected) {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-    isDbConnected = true;
-    console.log('MongoDB connected');
-  }
-}
-
-connectToDatabase();
-
-// ----------- VERCEL (serverless) SUPPORT -----------
-module.exports = {
-  handler: serverless(app), // Vercel serverless entry point
-  app // for local development
-};
-
-// ----------- LOCAL DEVELOPMENT SUPPORT -----------
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
   });
+
+// 👇 Export for Vercel Serverless
+module.exports = app;
+
+// If running locally
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
