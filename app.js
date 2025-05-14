@@ -119,6 +119,11 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+app.get('/welcome', (req, res) => {
+  res.json({
+    message: "Welcome to the Blog App API! Feel free to explore.",
+  });
+});
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
