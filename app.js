@@ -19,10 +19,7 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors({
-  origin: ['http://localhost:3000'],
- 
-}));
+app.use(cors({origin:["http://localhost:3000",]}));
 
 // Serve static files (e.g., images, videos)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -63,7 +60,7 @@ mongoose.connect(process.env.MONGODB_URI)
     console.error('Failed to connect to MongoDB:', err);
     process.exit(1);
   });
- module.exports = app;
+module.exports = app;
 
 
 
