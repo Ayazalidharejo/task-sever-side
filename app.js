@@ -62,18 +62,12 @@
 
 
 
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-
-// Import routes
-const authRoutes = require('./routes/auth');
-const blogRoutes = require('./routes/blogs');
-const feedbackRoutes = require('./routes/feedback');
-const contactRoutes = require('./routes/contact');
+const serverless = require('serverless-http'); // For Vercel
 
 // Load environment variables
 dotenv.config();
@@ -83,8 +77,9 @@ const app = express();
 
 // CORS configuration
 const allowedOrigins = [
-  'http://localhost:3000',  // React frontend in development
-  'http://127.0.0.1:3000'
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://your-vercel-domain.vercel.app' // Replace with your deployed frontend
 ];
 
 app.use(cors({
@@ -101,44 +96,51 @@ app.use(cors({
 // Middleware
 app.use(express.json());
 
-// Serve static files (e.g., images, videos)
+// Serve static files (for local development only)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Use routes
+// Routes
+const authRoutes = require('./routes/auth');
+const blogRoutes = require('./routes/blogs');
+const feedbackRoutes = require('./routes/feedback');
+const contactRoutes = require('./routes/contact');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/contact', contactRoutes);
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('client/build'));
+// Welcome route
+app.get('/api/welcome', (req, res) => {
+  res.json({ message: 'Welcome to the Blog App API!' });
+});
 
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
-  });
+// MongoDB connection
+let isDbConnected = false;
+
+async function connectToDatabase() {
+  if (!isDbConnected) {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    isDbConnected = true;
+    console.log('MongoDB connected');
+  }
 }
 
-app.get('/welcome', (req, res) => {
-  res.json({
-    message: "Welcome to the Blog App API! Feel free to explore.",
-  });
-});
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
+connectToDatabase();
 
-    // Start server
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('Failed to connect to MongoDB:', err);
-    process.exit(1);
-  });
+// ----------- VERCEL (serverless) SUPPORT -----------
+module.exports = {
+  handler: serverless(app), // Vercel serverless entry point
+  app // for local development
+};
 
-// Export app for testing or serverless deployments
-module.exports = app;
+// ----------- LOCAL DEVELOPMENT SUPPORT -----------
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
